@@ -37,6 +37,15 @@ const userId = req.user.id
         sender: req.user.email,
         created_at: new Date()
     })
+    res.status(201).json({
+    message: 'Message sent',
+    data: {
+        id: result.insertId,
+        channel_id: channelId,
+        content: content.trim(),
+        sender: req.user.email
+        }
+    })
 })
 
 
@@ -128,13 +137,25 @@ router.get('/search/:keyword', auth, async (req, res) => {
 
 // PIN MESSAGE
 router.put('/pin/:id', auth, async (req, res) => {
-    await db.query(
-        'UPDATE messages SET pinned=true WHERE id=?',
-        [req.params.id]
-    )
+  const userId = req.user.id
+  const { id } = req.params
 
-    res.json({ message: 'Pinned' })
+  const [rows] = await db.query(
+    'SELECT id FROM messages WHERE id=? AND user_id=?',
+    [id, userId]
+  )
+
+  if (rows.length === 0)
+    return res.status(403).json({ message: 'Cannot pin this message' })
+
+  await db.query(
+    'UPDATE messages SET pinned=true WHERE id=?',
+    [id]
+  )
+
+  res.json({ message: 'Message pinned' })
 })
+
 
 
 module.exports = router

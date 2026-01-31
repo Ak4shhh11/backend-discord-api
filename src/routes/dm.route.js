@@ -31,7 +31,8 @@ router.post('/start/:userId', auth, async (req, res) => {
 
     // 3. Buat conversation baru
     const [conv] = await db.query(
-        'INSERT INTO conversations VALUES ()'
+        'INSERT INTO conversations (created_at) VALUES (NOW())'
+
     )
 
     // 4. Masukkan member (IGNORE supaya aman)
@@ -46,15 +47,27 @@ router.post('/start/:userId', auth, async (req, res) => {
 
 // send dm
 router.post('/:convId', auth, async (req, res) => {
-    const { content } = req.body
+  const { content } = req.body
 
-    await db.query(
-        'INSERT INTO dm_messages (conversation_id, sender_id, content) VALUES (?, ?, ?)',
-        [req.params.convId, req.user.id, content]
-    )
+  const [conv] = await db.query(
+    'SELECT id FROM conversations WHERE id = ?',
+    [req.params.convId]
+  )
 
-    res.json({ message: 'DM sent' })
+  if (conv.length === 0) {
+    return res.status(404).json({
+      message: 'Conversation not found'
+    })
+  }
+
+  await db.query(
+    'INSERT INTO dm_messages (conversation_id, sender_id, content) VALUES (?, ?, ?)',
+    [req.params.convId, req.user.id, content]
+  )
+
+  res.json({ message: 'DM sent' })
 })
+
 
 // get dm history
 router.get('/:convId', auth, async (req, res) => {
